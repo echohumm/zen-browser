@@ -3,7 +3,7 @@
 # Contributor: StaticNullException <aurcontact@teto.party>
 
 pkgname=zen-browser
-pkgver=1.21.10b
+pkgver=1.23.3b
 pkgrel=1
 pkgdesc='Firefox-based web browser built from upstream release source snapshot'
 url='https://zen-browser.app'
@@ -54,7 +54,6 @@ makedepends=(
   nodejs
   onnxruntime
   python
-  rust
   unzip
   wasi-compiler-rt
   wasi-libc
@@ -88,7 +87,7 @@ source=(
   '0004-Use-wasm32-wasip1-target.patch'
   '0005-Fix-cbindgen-BudgetType_VALUES-COUNT-issue.patch'
 )
-sha256sums=('a1d8558be58b46d6b0d60ab5922f492ead1f041026b630de8b1492d338e60771'
+sha256sums=('71c938da6baa0ed15892933f2e7964ad777279cfcbd4e29c3b4b22efe17e8aeb'
             'af16fec9a88cbfffee34a6a4eb5b3074931477fcefee252840d77cf146568851'
             '28b086f5492d8e6731fe0dfe34a2e4c6d4d502a9eefa15a31e44b5788cf4df89'
             '0d24f2a45fa0f7fe108a91a50ae55708f66899b0229df7722fb87962f7a2a243')
@@ -100,6 +99,9 @@ prepare() {
   bsdtar -xf "$srcdir/$_srcroot-$pkgver.tar.zst" -C "$srcdir/$_srcroot"
 
   cd "$srcdir/$_srcroot"
+
+  export RUSTC=~/.cargo/bin/rustc
+  export CARGO=~/.cargo/bin/cargo
 
   patch -Np1 -i "$srcdir/0004-Use-wasm32-wasip1-target.patch"
   patch -Np1 -i "$srcdir/0005-Fix-cbindgen-BudgetType_VALUES-COUNT-issue.patch"
@@ -118,6 +120,8 @@ ac_add_options --enable-linker=lld
 ac_add_options --disable-install-strip
 ac_add_options --disable-bootstrap
 ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
+
+ac_add_options --with-ccache=sccache
 
 # Branding
 ac_add_options --enable-official-branding
@@ -148,6 +152,8 @@ build() {
   export MOZBUILD_STATE_PATH="$srcdir/mozbuild"
   export MOZ_BUILD_DATE="$(date -u${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EPOCH} +%Y%m%d%H%M%S)"
   export MOZ_NOSPAM=1
+  export SCCACHE_DIR="$HOME/.cache/sccache"
+  export SCCACHE_CACHE_SIZE=64G
 
   CFLAGS="${CFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
   CXXFLAGS="${CXXFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
@@ -160,7 +166,7 @@ build() {
   cat >.mozconfig "$srcdir/mozconfig" - <<'EOF'
 ac_add_options --enable-profile-generate=cross
 EOF
-  ./mach build --priority normal
+  ./mach build --priority normal --show-all-warnings
 
   echo 'Profiling instrumented browser...'
   ./mach package

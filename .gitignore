@@ -1,0 +1,9 @@
+# source files
+zen-source*.tar.zst
+
+# packaging
+pkg/
+src/
+
+# packages
+zen*.pkg.tar.zst
